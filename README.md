@@ -48,8 +48,9 @@ Open any webpage containing a configured word. Matching content will be
 hidden automatically. Change the word list via the extension's
 options page.
 
-![](docs/chrome-extensions.png)
-![](docs/extension-options.png)
+| Load unpacked                          | Options page                             |
+| -------------------------------------- | ---------------------------------------- |
+| ![Chrome extensions page with the extension loaded unpacked](docs/chrome-extensions.png) | ![Options page with the word list](docs/extension-options.png) |
 
 ## Development
 
