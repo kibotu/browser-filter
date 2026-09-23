@@ -48,6 +48,9 @@ Open any webpage containing a configured word. Matching content will be
 hidden automatically. Change the word list via the extension's
 options page.
 
+![](/Users/jan.rabe/Documents/repos/kibotu/browser-filter/docs/chrome-extensions.png)
+![](/Users/jan.rabe/Documents/repos/kibotu/browser-filter/docs/extension-options.png)
+
 ## Development
 
 ```bash
