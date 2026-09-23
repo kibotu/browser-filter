@@ -8,7 +8,9 @@
   const BATCH_DELAY_MS = 50;
 
   function createContentController(options) {
-    const doc = options.document;
+    // The bootstrap path passes no options; resolve the document here so the
+    // controller never observes an undefined target.
+    const doc = options.document || global.document;
     const createMatcher = options.createMatcher || global.WordFilterMatcher.createMatcher;
     const scanRoot = options.scanRoot || global.WordFilterDOM.scanRoot;
     const clearAll = options.clearAll || global.WordFilterDOM.clearAll;
@@ -131,7 +133,9 @@
 
   /* v8 ignore start -- platform bootstrap; runs only inside a real extension */
   function bootstrap() {
-    startContentScript();
+    startContentScript().catch(function (error) {
+      console.error('browser-word-filter: failed to start', error);
+    });
   }
 
   if (global.WordFilterCompat && global.WordFilterCompat.getExtensionApi()) {

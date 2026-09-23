@@ -1,6 +1,6 @@
 {
   "name": "browser-word-filter",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "description": "A tiny, local browser extension that hides webpage content containing configurable words.",
   "keywords": [
     "browser-extension",

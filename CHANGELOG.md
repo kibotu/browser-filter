@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-23
+
+### Fixed
+
+- Content script failed to start with `TypeError: Failed to execute
+  'observe' on 'MutationObserver': parameter 1 is not of type 'Node'`,
+  leaving pages unfiltered. The controller now resolves `document`
+  itself on the real bootstrap path, where no options are passed.
+- Startup failures in the content script are now logged to the console
+  instead of surfacing only as an unhandled promise rejection.
+
+## [1.0.0] - 2026-09-23
+
+### Changed
+
+- CI runs only on pushes to `main`; pull requests no longer trigger
+  workflows.
+- Releases are created from unprefixed SemVer tags (`1.0.0`, not
+  `v1.0.0`).
+
 ## [0.1.0] - 2026-09-23
 
 ### Added

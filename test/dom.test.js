@@ -168,6 +168,19 @@ describe('configuration fallbacks', () => {
     await vi.waitFor(() => expect(isHidden(article)).toBe(true));
   });
 
+  // Regression: the real bootstrap path passes no options at all; the
+  // controller must resolve the document itself, not only startContentScript.
+  it('works without an explicit document (real bootstrap path)', async () => {
+    const controller = await startContentScript({
+      batchDelay: 0,
+      storageArea: createCallbackArea({ settings: { enabled: true, words: ['Trump'] } }),
+    });
+    controllers.push(controller);
+
+    const article = matchingArticle();
+    await vi.waitFor(() => expect(isHidden(article)).toBe(true));
+  });
+
   it('runs an initial scan at DOMContentLoaded when injected early', async () => {
     const early = matchingArticle(); // present before the content script starts
     Object.defineProperty(document, 'readyState', { configurable: true, value: 'loading' });
