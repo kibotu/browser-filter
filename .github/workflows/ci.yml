@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test with coverage
+        run: npm test -- --coverage
+
+      - name: Static validation
+        run: npm run validate
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Verify generated artifacts
+        run: |
+          set -euo pipefail
+          ls -R dist
+          for archive in dist/*/*.zip; do
+            unzip -t "$archive"
+          done
+          # Reproducible builds: a second build must be byte-identical.
+          sha256sum dist/*/*.zip > /tmp/first-build.sha
+          npm run build
+          sha256sum dist/*/*.zip > /tmp/second-build.sha
+          diff /tmp/first-build.sha /tmp/second-build.sha
+          node scripts/validate.mjs --require-dist
+
+      - name: Dependency audit (informational)
+        run: npm audit --audit-level=high
+        continue-on-error: true

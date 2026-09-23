@@ -1,0 +1,35 @@
+{
+  "name": "browser-word-filter",
+  "version": "0.1.0",
+  "description": "A tiny, local browser extension that hides webpage content containing configurable words.",
+  "keywords": [
+    "browser-extension",
+    "webextension",
+    "word-filter",
+    "content-script",
+    "privacy"
+  ],
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "validate": "node scripts/validate.mjs",
+    "build": "node scripts/build.mjs",
+    "icons": "node scripts/gen-icons.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^5.0.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "jsdom": "^30.1.1",
+    "vitest": "^5.0.1"
+  }
+}

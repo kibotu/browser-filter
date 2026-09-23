@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Trump News Fixture</title>
+  <style>.trump-marker { color: red; }</style>
+</head>
+<body>
+  <h1>Daily fixture</h1>
+
+  <article id="matching-article">
+    <h2>Trump announces tariffs</h2>
+    <p>Body copy about the announcement.</p>
+  </article>
+
+  <article id="clean-article">
+    <h2>Garden show results</h2>
+    <p>Nothing to filter here.</p>
+  </article>
+
+  <article id="nested-match">
+    <p><span>Later, <b>Trump</b> appeared again.</span></p>
+  </article>
+
+  <article id="nested-clean">
+    <p><span>The <b>trumpet</b> section played.</span></p>
+  </article>
+
+  <section id="list-section">
+    <ul>
+      <li id="matching-list-item">TRUMP rally on Friday</li>
+      <li id="clean-list-item">Picnic on Saturday</li>
+    </ul>
+  </section>
+
+  <article id="section-boundary">
+    <section id="inner-section"><p>trump slogan on a sign</p></section>
+    <p>Rest of the article.</p>
+  </article>
+
+  <div id="bare-match">Fallback: trump inside a plain div.</div>
+
+  <article id="already-hidden" class="word-filter-hidden">trump was already hidden</article>
+  <article id="page-hidden" style="display:none">trump is hidden by the page</article>
+
+  <script>window.__fixtureWord = "Trump";</script>
+  Trump appears as direct text in the body.
+</body>
+</html>

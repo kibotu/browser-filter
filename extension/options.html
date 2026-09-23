@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Browser Word Filter — Options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main id="word-filter-options">
+    <h1>Word Filter</h1>
+    <p class="hint">Filtering happens entirely on this device. Nothing leaves your browser.</p>
+
+    <label class="row" for="enabled">
+      <input type="checkbox" id="enabled">
+      Enabled
+    </label>
+
+    <h2>Words</h2>
+    <ul id="word-list"></ul>
+
+    <div class="row add-row">
+      <input type="text" id="new-word" placeholder="Word or phrase" autocomplete="off">
+      <button type="button" id="add-word">Add word</button>
+    </div>
+
+    <div class="row actions">
+      <button type="button" id="save" class="primary">Save</button>
+      <span id="status" role="status" aria-live="polite"></span>
+    </div>
+  </main>
+
+  <script src="compat.js"></script>
+  <script src="config.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

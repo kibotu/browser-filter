@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Browser Word Filter",
+  "version": "0.1.0",
+  "description": "Hides webpage content containing configurable words. Local-only: no server, no tracking, no analytics.",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["compat.js", "config.js", "matcher.js", "filter.js", "content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  }
+}
