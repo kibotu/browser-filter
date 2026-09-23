@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-23
+
+### Added
+
+- Local hide counter: every hidden block increments a running total,
+  stored in extension local storage and shown on the options page.
+  Counter writes are throttled, flushed on stop, and never re-apply the
+  settings — a hide cannot feed back into another hide.
+
+### Fixed
+
+- One matching word could hide an entire `article`, `section`, or `main`
+  container — a rendered README disappeared wholesale. Hide targets now
+  include paragraph-level blocks (`p`, headings, `blockquote`, `pre`,
+  `td`/`th`, `dt`/`dd`), so only the block containing the match is
+  hidden. `main` is no longer a jump target; if no block boundary exists,
+  the immediate containing element is used instead.
+
 ## [1.0.1] - 2026-09-23
 
 ### Fixed

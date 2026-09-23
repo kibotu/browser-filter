@@ -12,14 +12,16 @@ No server. No tracking. No analytics.
 ## What it does
 
 When a page contains a configured word (default: `Trump`), the extension
-hides the smallest useful piece of content around it — an `article`,
-`section`, `li`, or `main` — and keeps doing so for content added later
-by dynamic pages. Non-matching content is untouched.
+hides the smallest useful piece of content around it — a paragraph,
+heading, list item, or table cell, and only a whole `section` or
+`article` when no smaller block exists — and keeps doing so for content
+added later by dynamic pages. Non-matching content is untouched.
 
 ## Features
 
 - Local-only processing: everything runs in your browser.
 - Configurable word list with a small options page.
+- Local hide counter on the options page — the total never leaves your device.
 - Case-insensitive whole-word matching (`Trump` matches `Trump's`, not `trumpet`).
 - Dynamic content filtering via `MutationObserver`.
 - Reversible: hidden content is marked with a CSS class, never deleted.
@@ -113,7 +115,7 @@ options page ──> extension.storage <── content script
                                         ├── scan DOM
                                         ├── match text (whole-word)
                                         ├── pick smallest boundary
-                                        │   (article / section / li / main)
+                                        │   (p / heading / li / td / article)
                                         └── add .word-filter-hidden
                                         MutationObserver ──> scan added subtrees
 ```
@@ -123,7 +125,7 @@ options page ──> extension.storage <── content script
 | `extension/matcher.js` | Whole-word, case-insensitive matching         |
 | `extension/filter.js`  | DOM scan, content boundaries, hide/restore     |
 | `extension/content.js` | Orchestration: settings, observer, batching    |
-| `extension/config.js`  | Defaults, normalisation, persistence           |
+| `extension/config.js`  | Defaults, normalisation, settings + stats persistence |
 | `extension/compat.js`  | `browser`/`chrome` + callback/promise wrapper  |
 | `extension/options.js` | Options page UI                                |
 
@@ -136,6 +138,9 @@ server.
 There is no backend, no telemetry, no analytics, and no remote code.
 The build fails if shipped sources gain a network call, `eval`, or
 page-storage access.
+
+The hide counter lives in local extension storage on your device —
+enough to show a total on the options page, nothing more.
 
 ## Permissions
 

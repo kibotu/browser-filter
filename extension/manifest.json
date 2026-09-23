@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Browser Word Filter",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Hides webpage content containing configurable words. Local-only: no server, no tracking, no analytics.",
   "permissions": ["storage"],
   "content_scripts": [
