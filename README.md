@@ -17,6 +17,10 @@ heading, list item, or table cell, and only a whole `section` or
 `article` when no smaller block exists — and keeps doing so for content
 added later by dynamic pages. Non-matching content is untouched.
 
+| without filter                        | with filter                             |
+| -------------------------------------- | ---------------------------------------- |
+| ![](docs/without-filter.png) | ![](docs/filtered.png) |
+
 ## Features
 
 - Local-only processing: everything runs in your browser.
