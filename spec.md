@@ -459,9 +459,10 @@ A build failure must produce a non-zero exit code.
 Run on:
 
 ```text
-push
-pull_request
+push to main
 ```
+
+Pull requests are not a trigger; CI runs on `main` after merge.
 
 Pipeline:
 
@@ -495,12 +496,13 @@ A matrix across multiple Node LTS versions can be added once the project is stab
 
 # 16. Release Automation
 
-`release.yml` should run when a version tag is pushed:
+`release.yml` should run when a version tag is pushed (tags use the
+bare SemVer form, no `v` prefix):
 
 ```text
-v0.1.0
-v0.2.0
-v1.0.0
+0.1.0
+0.2.0
+1.0.0
 ```
 
 Pipeline:
