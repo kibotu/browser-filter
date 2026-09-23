@@ -35,11 +35,18 @@ describe('scanRoot on a static page', () => {
 
   it('hides exactly the matching content boundaries', () => {
     expect(hiddenCount).toBe(5);
-    expect(isHidden(find(doc, '#matching-article'))).toBe(true);
-    expect(isHidden(find(doc, '#nested-match'))).toBe(true);
+    expect(isHidden(find(doc, '#matching-article h2'))).toBe(true);
+    expect(isHidden(find(doc, '#nested-match p'))).toBe(true);
     expect(isHidden(find(doc, '#matching-list-item'))).toBe(true);
-    expect(isHidden(find(doc, '#inner-section'))).toBe(true);
+    expect(isHidden(find(doc, '#inner-section p'))).toBe(true);
     expect(isHidden(find(doc, '#bare-match'))).toBe(true);
+  });
+
+  it('keeps the container of a matching block visible', () => {
+    expect(isHidden(find(doc, '#matching-article'))).toBe(false);
+    expect(isHidden(find(doc, '#nested-match'))).toBe(false);
+    expect(isHidden(find(doc, '#inner-section'))).toBe(false);
+    expect(isHidden(find(doc, '#section-boundary'))).toBe(false);
   });
 
   it('keeps non-matching content visible', () => {
@@ -50,11 +57,12 @@ describe('scanRoot on a static page', () => {
     expect(isHidden(find(doc, '#list-section'))).toBe(false);
   });
 
-  it('prefers the smallest useful boundary (li over section over article)', () => {
+  it('prefers the smallest useful boundary (block over section over article)', () => {
     expect(isHidden(find(doc, '#matching-list-item'))).toBe(true);
     expect(isHidden(find(doc, '#list-section'))).toBe(false);
 
-    expect(isHidden(find(doc, '#inner-section'))).toBe(true);
+    expect(isHidden(find(doc, '#inner-section p'))).toBe(true);
+    expect(isHidden(find(doc, '#inner-section'))).toBe(false);
     const article = find(doc, '#section-boundary');
     expect(isHidden(article)).toBe(false);
     expect(article.querySelector('#inner-section + p').textContent).toContain('Rest of the article');
@@ -86,7 +94,7 @@ describe('scanRoot on a static page', () => {
   });
 
   it('marks hidden elements as processed for idempotent scans', () => {
-    expect(isMarked(find(doc, '#matching-article'))).toBe(true);
+    expect(isMarked(find(doc, '#matching-article h2'))).toBe(true);
     expect(isMarked(find(doc, '#bare-match'))).toBe(true);
     expect(scanRoot(doc, createMatcher(['Trump']))).toBe(0);
   });
@@ -115,6 +123,41 @@ describe('scanRoot guards', () => {
   it('does nothing when no words are configured', () => {
     const doc = loadFixture();
     expect(scanRoot(doc, createMatcher([]))).toBe(0);
+  });
+});
+
+describe('paragraph granularity', () => {
+  // Regression: a rendered README lives in one <article>. Without
+  // paragraph-level boundaries a single match hid the entire article.
+  it('hides only the matching paragraph, not the whole article', () => {
+    const doc = new DOMParser().parseFromString(
+      '<!DOCTYPE html><html><body><article class="markdown-body">' +
+        '<p>Unrelated intro.</p>' +
+        '<p>A mention of trump here.</p>' +
+        '<p>Unrelated outro.</p>' +
+        '</article></body></html>',
+      'text/html'
+    );
+    const [intro, match, outro] = doc.querySelectorAll('p');
+    const article = doc.querySelector('article');
+
+    expect(scanRoot(doc, createMatcher(['trump']))).toBe(1);
+    expect(isHidden(match)).toBe(true);
+    expect(isHidden(intro)).toBe(false);
+    expect(isHidden(outro)).toBe(false);
+    expect(isHidden(article)).toBe(false);
+  });
+
+  it('hides the matching heading instead of the article around it', () => {
+    const doc = new DOMParser().parseFromString(
+      '<!DOCTYPE html><html><body><article><h2>Trump announces tariffs</h2>' +
+        '<p>Body copy.</p></article></body></html>',
+      'text/html'
+    );
+    expect(scanRoot(doc, createMatcher(['Trump']))).toBe(1);
+    expect(isHidden(doc.querySelector('h2'))).toBe(true);
+    expect(isHidden(doc.querySelector('p'))).toBe(false);
+    expect(isHidden(doc.querySelector('article'))).toBe(false);
   });
 });
 
@@ -148,7 +191,7 @@ describe('findHideTarget', () => {
   it('selects role="article" boundaries', () => {
     const wrapper = doc.createElement('div');
     wrapper.setAttribute('role', 'article');
-    const inner = doc.createElement('p');
+    const inner = doc.createElement('div');
     inner.textContent = 'match';
     wrapper.append(inner);
     doc.body.append(wrapper);
@@ -156,13 +199,29 @@ describe('findHideTarget', () => {
     expect(target).toBe(wrapper);
   });
 
-  it('selects main when no smaller boundary exists', () => {
+  it('selects the paragraph over the article containing it', () => {
+    const article = doc.createElement('article');
+    const p = doc.createElement('p');
+    p.textContent = 'match';
+    article.append(p);
+    doc.body.append(article);
+    expect(findHideTarget(p.firstChild, doc)).toBe(p);
+  });
+
+  it('never jumps up to main; falls back to the immediate element', () => {
     const main = doc.createElement('main');
     const div = doc.createElement('div');
     div.textContent = 'match';
     main.append(div);
     doc.body.append(main);
-    expect(findHideTarget(div.firstChild, doc)).toBe(main);
+    expect(findHideTarget(div.firstChild, doc)).toBe(div);
+  });
+
+  it('returns main itself when the text lives directly in main', () => {
+    const main = doc.createElement('main');
+    main.append(doc.createTextNode('match'));
+    doc.body.append(main);
+    expect(findHideTarget(main.firstChild, doc)).toBe(main);
   });
 });
 
@@ -174,7 +233,7 @@ describe('clearAll', () => {
     expect(cleared).toBeGreaterThan(0);
     expect(doc.querySelectorAll(`.${HIDDEN_CLASS}`).length).toBe(0);
     expect(doc.querySelectorAll(`[${PROCESSED_ATTRIBUTE}]`).length).toBe(0);
-    expect(isHidden(doc.querySelector('#matching-article'))).toBe(false);
+    expect(isHidden(doc.querySelector('#matching-article h2'))).toBe(false);
   });
 
   it('clears a root element that is itself marked', () => {
@@ -218,8 +277,8 @@ describe('visibility handling', () => {
       Object.defineProperty(element, 'checkVisibility', { configurable: true, value: undefined });
     }
     expect(scanRoot(doc, createMatcher(['Trump']))).toBe(1);
-    expect(isHidden(doc.querySelector('#visible'))).toBe(true);
-    expect(isMarked(doc.querySelector('#hidden-inline'))).toBe(false);
-    expect(isMarked(doc.querySelector('#hidden-attr'))).toBe(false);
+    expect(isHidden(doc.querySelector('#visible p'))).toBe(true);
+    expect(isMarked(doc.querySelector('#hidden-inline p'))).toBe(false);
+    expect(isMarked(doc.querySelector('#hidden-attr p'))).toBe(false);
   });
 });

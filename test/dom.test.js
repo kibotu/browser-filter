@@ -18,10 +18,14 @@ const fixtureBody = new DOMParser().parseFromString(
 
 const isHidden = (element) => element.classList.contains(HIDDEN_CLASS);
 
+// Cards are <article><p>…</p></article>. Granularity is the block that
+// holds the match, so the <p> hides and the card shell stays visible.
+const paragraph = (card) => card.querySelector('p');
+
 const controllers = [];
 
 async function start(options = {}) {
-  const controller = await startContentScript({ document, batchDelay: 0, ...options });
+  const controller = await startContentScript({ document, batchDelay: 0, statsFlushDelay: 0, ...options });
   controllers.push(controller);
   return controller;
 }
@@ -52,18 +56,18 @@ describe('MutationObserver filtering', () => {
     await start({ storageArea: area });
 
     const article = matchingArticle();
-    await vi.waitFor(() => expect(isHidden(article)).toBe(true));
-    expect(article.hasAttribute(PROCESSED_ATTRIBUTE)).toBe(true);
+    await vi.waitFor(() => expect(isHidden(paragraph(article))).toBe(true));
+    expect(paragraph(article).hasAttribute(PROCESSED_ATTRIBUTE)).toBe(true);
 
     const clean = cleanArticle();
     await sleep(30);
-    expect(isHidden(clean)).toBe(false);
+    expect(isHidden(paragraph(clean))).toBe(false);
 
     // Removals and comment insertions schedule no scan and cause no errors.
     clean.remove();
     document.getElementById('feed').append(document.createComment('noise'));
     await sleep(30);
-    expect(isHidden(article)).toBe(true);
+    expect(isHidden(paragraph(article))).toBe(true);
   });
 
   it('hides an element whose text is changed in place', async () => {
@@ -73,10 +77,10 @@ describe('MutationObserver filtering', () => {
 
     const article = insert('<article><p id="story">Initial headline</p></article>');
     await sleep(30);
-    expect(isHidden(article)).toBe(false);
+    expect(isHidden(article.querySelector('#story'))).toBe(false);
 
     article.querySelector('#story').firstChild.data = 'Trump update landed';
-    await vi.waitFor(() => expect(isHidden(article)).toBe(true));
+    await vi.waitFor(() => expect(isHidden(article.querySelector('#story'))).toBe(true));
   });
 
   it('hides an element when a matching text node is appended', async () => {
@@ -87,7 +91,76 @@ describe('MutationObserver filtering', () => {
     const article = insert('<article><p id="story">Initial headline</p></article>');
     await sleep(30);
     article.querySelector('#story').append(' and Trump too');
-    await vi.waitFor(() => expect(isHidden(article)).toBe(true));
+    await vi.waitFor(() => expect(isHidden(article.querySelector('#story'))).toBe(true));
+  });
+});
+
+describe('hide counter', () => {
+  it('counts each hidden block and persists the total', async () => {
+    const area = createCallbackArea({ settings: { enabled: true, words: ['Trump'] } });
+    await start({ storageArea: area });
+
+    matchingArticle();
+    await vi.waitFor(() => expect(area.data.stats).toEqual({ hidden: 1 }));
+
+    const second = matchingArticle();
+    await vi.waitFor(() => expect(isHidden(paragraph(second))).toBe(true));
+    await vi.waitFor(() => expect(area.data.stats).toEqual({ hidden: 2 }));
+
+    cleanArticle(); // non-matching content must not count
+    await sleep(30);
+    expect(area.data.stats).toEqual({ hidden: 2 });
+  });
+
+  it('keeps the count when a counter write fails and retries later', async () => {
+    const area = createCallbackArea({ settings: { enabled: true, words: ['Trump'] } });
+    await start({ storageArea: area });
+
+    const first = matchingArticle();
+    await vi.waitFor(() => expect(area.data.stats).toEqual({ hidden: 1 }));
+
+    const originalSet = area.set;
+    area.set = () => Promise.reject(new Error('disk full'));
+
+    const second = matchingArticle();
+    await vi.waitFor(() => expect(isHidden(paragraph(second))).toBe(true));
+    await sleep(30);
+    expect(area.data.stats).toEqual({ hidden: 1 }); // the write failed
+
+    area.set = originalSet;
+    const third = matchingArticle();
+    await vi.waitFor(() => expect(isHidden(paragraph(third))).toBe(true));
+    // 1 already stored + the lost 1 retried + the new 1
+    await vi.waitFor(() => expect(area.data.stats).toEqual({ hidden: 3 }));
+    expect(isHidden(paragraph(first))).toBe(true);
+  });
+
+  it('flushes the pending count when the controller stops', async () => {
+    const area = createCallbackArea({ settings: { enabled: true, words: ['Trump'] } });
+    const controller = await start({ storageArea: area, statsFlushDelay: 60000 });
+
+    const card = matchingArticle();
+    await vi.waitFor(() => expect(isHidden(paragraph(card))).toBe(true));
+    expect(area.data.stats).toBeUndefined();
+
+    controller.stop();
+    await vi.waitFor(() => expect(area.data.stats).toEqual({ hidden: 1 }));
+  });
+
+  it('ignores its own counter write instead of re-hiding the page', async () => {
+    const area = createCallbackArea({ settings: { enabled: true, words: ['Trump'] } });
+    const emitter = createEmitter();
+    await start({ api: { storage: { local: area, onChanged: emitter } } });
+
+    const card = matchingArticle();
+    await vi.waitFor(() => expect(area.data.stats).toEqual({ hidden: 1 }));
+
+    // Real browsers deliver our own counter write back through onChanged.
+    emitter.emit({ stats: { hidden: 1 } });
+    await sleep(30);
+
+    expect(area.data.stats).toEqual({ hidden: 1 }); // a re-scan would make it 2
+    expect(isHidden(paragraph(card))).toBe(true);
   });
 });
 
@@ -103,17 +176,17 @@ describe('settings changes propagate from storage', () => {
     expect(emitter.size).toBe(1);
 
     const first = matchingArticle();
-    await vi.waitFor(() => expect(isHidden(first)).toBe(true));
+    await vi.waitFor(() => expect(isHidden(paragraph(first))).toBe(true));
 
     area.data.settings = { enabled: false, words: ['Trump'] };
     emitter.emit();
 
-    await vi.waitFor(() => expect(isHidden(first)).toBe(false));
-    expect(first.hasAttribute(PROCESSED_ATTRIBUTE)).toBe(false);
+    await vi.waitFor(() => expect(isHidden(paragraph(first))).toBe(false));
+    expect(paragraph(first).hasAttribute(PROCESSED_ATTRIBUTE)).toBe(false);
 
     const second = matchingArticle();
     await sleep(30);
-    expect(isHidden(second)).toBe(false);
+    expect(isHidden(paragraph(second))).toBe(false);
   });
 
   it('changing the word list restores old matches and applies new ones', async () => {
@@ -122,16 +195,16 @@ describe('settings changes propagate from storage', () => {
     await start({ api: apiWith(area, emitter) });
 
     const trumpArticle = matchingArticle();
-    await vi.waitFor(() => expect(isHidden(trumpArticle)).toBe(true));
+    await vi.waitFor(() => expect(isHidden(paragraph(trumpArticle))).toBe(true));
     const bidenArticle = insert('<article><p>Biden spoke first.</p></article>');
     await sleep(30);
-    expect(isHidden(bidenArticle)).toBe(false);
+    expect(isHidden(paragraph(bidenArticle))).toBe(false);
 
     area.data.settings = { enabled: true, words: ['Biden'] };
     emitter.emit();
 
-    await vi.waitFor(() => expect(isHidden(bidenArticle)).toBe(true));
-    expect(isHidden(trumpArticle)).toBe(false);
+    await vi.waitFor(() => expect(isHidden(paragraph(bidenArticle))).toBe(true));
+    expect(isHidden(paragraph(trumpArticle))).toBe(false);
   });
 
   it('stop() removes the storage listener and disconnects the observer', async () => {
@@ -147,7 +220,7 @@ describe('settings changes propagate from storage', () => {
     expect(emitter.size).toBe(0);
 
     await sleep(30);
-    expect(isHidden(article)).toBe(false);
+    expect(isHidden(paragraph(article))).toBe(false);
   });
 });
 
@@ -156,7 +229,7 @@ describe('configuration fallbacks', () => {
     await start({ api: {}, storageArea: null });
 
     const article = matchingArticle();
-    await vi.waitFor(() => expect(isHidden(article)).toBe(true));
+    await vi.waitFor(() => expect(isHidden(paragraph(article))).toBe(true));
   });
 
   it('uses default settings when the storage read fails', async () => {
@@ -165,7 +238,7 @@ describe('configuration fallbacks', () => {
     });
 
     const article = matchingArticle();
-    await vi.waitFor(() => expect(isHidden(article)).toBe(true));
+    await vi.waitFor(() => expect(isHidden(paragraph(article))).toBe(true));
   });
 
   // Regression: the real bootstrap path passes no options at all; the
@@ -178,7 +251,7 @@ describe('configuration fallbacks', () => {
     controllers.push(controller);
 
     const article = matchingArticle();
-    await vi.waitFor(() => expect(isHidden(article)).toBe(true));
+    await vi.waitFor(() => expect(isHidden(paragraph(article))).toBe(true));
   });
 
   it('runs an initial scan at DOMContentLoaded when injected early', async () => {
@@ -192,14 +265,14 @@ describe('configuration fallbacks', () => {
       });
 
       await sleep(0);
-      expect(isHidden(early)).toBe(true); // initial apply does not wait
+      expect(isHidden(paragraph(early))).toBe(true); // initial apply does not wait
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
       const controller = await pending;
       controllers.push(controller);
 
       const later = matchingArticle();
-      await vi.waitFor(() => expect(isHidden(later)).toBe(true));
+      await vi.waitFor(() => expect(isHidden(paragraph(later))).toBe(true));
     } finally {
       delete document.readyState;
     }

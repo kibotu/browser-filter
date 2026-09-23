@@ -89,3 +89,9 @@ input[type="text"] {
   color: var(--muted);
   font-size: 0.875rem;
 }
+
+.stats {
+  margin-top: 1.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}

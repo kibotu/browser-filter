@@ -51,6 +51,21 @@ describe('options page', () => {
     expect(root.querySelector('#status').textContent).toContain('Could not load settings');
     expect(root.querySelector('#enabled').checked).toBe(true);
     expect(root.querySelectorAll('#word-list li')).toHaveLength(1);
+    expect(root.querySelector('#hidden-count').textContent).toBe('—');
+  });
+
+  it('shows the persisted hide counter', async () => {
+    const { page, $ } = setup({ stats: { hidden: 42 } });
+    await page.load();
+
+    expect($('#hidden-count').textContent).toBe('42');
+  });
+
+  it('starts the counter at zero when nothing is stored', async () => {
+    const { page, $ } = setup();
+    await page.load();
+
+    expect($('#hidden-count').textContent).toBe('0');
   });
 
   it('adds a word from the input', async () => {

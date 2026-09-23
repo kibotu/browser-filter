@@ -3,7 +3,8 @@ import '../extension/compat.js';
 import '../extension/config.js';
 import { createCallbackArea, createPromiseArea } from './helpers.js';
 
-const { DEFAULT_SETTINGS, normalizeSettings, loadSettings, saveSettings } = globalThis.WordFilterConfig;
+const { DEFAULT_SETTINGS, normalizeSettings, loadSettings, saveSettings, DEFAULT_STATS, normalizeStats, loadStats, addHidden } =
+  globalThis.WordFilterConfig;
 const compat = globalThis.WordFilterCompat;
 
 describe('defaults', () => {
@@ -112,6 +113,57 @@ describe('saveSettings', () => {
     const area = createCallbackArea();
     await saveSettings(area, { enabled: false, words: [] });
     await expect(loadSettings(area)).resolves.toEqual({ enabled: false, words: [] });
+  });
+});
+
+describe('stats', () => {
+  it('defaults to a frozen zero counter', () => {
+    expect(DEFAULT_STATS).toEqual({ hidden: 0 });
+    expect(Object.isFrozen(DEFAULT_STATS)).toBe(true);
+  });
+
+  it('normalises malformed counters to a non-negative integer', () => {
+    expect(normalizeStats(null)).toEqual({ hidden: 0 });
+    expect(normalizeStats('broken')).toEqual({ hidden: 0 });
+    expect(normalizeStats([3])).toEqual({ hidden: 0 });
+    expect(normalizeStats({ hidden: '12' })).toEqual({ hidden: 0 });
+    expect(normalizeStats({ hidden: -3 })).toEqual({ hidden: 0 });
+    expect(normalizeStats({ hidden: 2.9 })).toEqual({ hidden: 2 });
+    expect(normalizeStats({ hidden: 7 })).toEqual({ hidden: 7 });
+  });
+
+  it('loads the counter, falling back to zero', async () => {
+    await expect(loadStats(null)).resolves.toEqual({ hidden: 0 });
+    await expect(loadStats(createCallbackArea({ stats: { hidden: 4 } }))).resolves.toEqual({ hidden: 4 });
+    await expect(loadStats(createCallbackArea())).resolves.toEqual({ hidden: 0 });
+    await expect(loadStats(createCallbackArea({ stats: 'broken' }))).resolves.toEqual({ hidden: 0 });
+  });
+
+  it('accumulates hides across calls', async () => {
+    const area = createCallbackArea();
+    await expect(addHidden(area, 1)).resolves.toEqual({ hidden: 1 });
+    await expect(addHidden(area, 3)).resolves.toEqual({ hidden: 4 });
+    expect(area.data.stats).toEqual({ hidden: 4 });
+    await expect(loadStats(area)).resolves.toEqual({ hidden: 4 });
+  });
+
+  it('works with a promise-style area', async () => {
+    const area = createPromiseArea({ stats: { hidden: 2 } });
+    await expect(addHidden(area, 5)).resolves.toEqual({ hidden: 7 });
+    expect(area.data.stats).toEqual({ hidden: 7 });
+  });
+
+  it('ignores non-positive deltas and a missing storage area', async () => {
+    const area = createCallbackArea({ stats: { hidden: 5 } });
+    await expect(addHidden(area, 0)).resolves.toEqual({ hidden: 5 });
+    await expect(addHidden(area, -2)).resolves.toEqual({ hidden: 5 });
+    await expect(addHidden(null, 7)).resolves.toEqual({ hidden: 0 });
+    expect(area.data.stats).toEqual({ hidden: 5 });
+  });
+
+  it('propagates storage failures', async () => {
+    const area = { get: () => Promise.reject(new Error('io error')) };
+    await expect(addHidden(area, 1)).rejects.toThrow('io error');
   });
 });
 

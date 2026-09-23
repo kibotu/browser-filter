@@ -8,7 +8,9 @@
 
   const HIDDEN_CLASS = 'word-filter-hidden';
   const PROCESSED_ATTRIBUTE = 'data-word-filter-processed';
-  const BOUNDARY_SELECTOR = 'article, [role="article"], section, li, main';
+  const BOUNDARY_SELECTOR =
+    'p, blockquote, pre, h1, h2, h3, h4, h5, h6, dt, dd, td, th, li, ' +
+    'article, [role="article"], section';
   const SKIPPED_SELECTOR = 'script, style, noscript, template, title, textarea, option, head, svg, math';
   const MARKED_SELECTOR = '[' + PROCESSED_ATTRIBUTE + '], .' + HIDDEN_CLASS;
   const CLEAR_SELECTOR = '.' + HIDDEN_CLASS + ', ' + MARKED_SELECTOR;
@@ -49,9 +51,12 @@
   }
 
   /**
-   * Walk up from the matching text and return the deepest content boundary
-   * (article / [role=article] / section / li / main). If none exists, fall
-   * back to the immediate containing element - but never body or html.
+   * Walk up from the matching text and return the deepest content boundary:
+   * a paragraph, heading, list item or table cell where possible, and only
+   * a whole article/section when the text sits in no smaller block. `main`
+   * is deliberately not a boundary - jumping up to it would hide the entire
+   * page container for a single match. If nothing matches, fall back to the
+   * immediate containing element - but never body or html.
    */
   function findHideTarget(textNode, doc) {
     const start = textNode.parentElement;

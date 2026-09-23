@@ -1,6 +1,7 @@
 /**
  * Options page: edit the enabled flag and the word list, persist to
- * extension storage. All storage access goes through config/compat.
+ * extension storage, and show the local hide counter. All storage access
+ * goes through config/compat.
  */
 (function (global) {
   'use strict';
@@ -18,6 +19,7 @@
     const addButton = root.querySelector('#add-word');
     const saveButton = root.querySelector('#save');
     const status = root.querySelector('#status');
+    const hiddenCount = root.querySelector('#hidden-count');
 
     let words = [];
 
@@ -40,12 +42,22 @@
       });
     }
 
+    async function renderStats() {
+      try {
+        const stats = await config.loadStats(storageArea);
+        hiddenCount.textContent = String(stats.hidden);
+      } catch (_error) {
+        hiddenCount.textContent = '—';
+      }
+    }
+
     async function load() {
       try {
         const settings = await config.loadSettings(storageArea);
         enabledInput.checked = settings.enabled;
         words = settings.words;
         render();
+        await renderStats();
         setStatus('');
         return settings;
       } catch (_error) {
@@ -53,6 +65,7 @@
         enabledInput.checked = fallback.enabled;
         words = fallback.words;
         render();
+        await renderStats();
         setStatus('Could not load settings; showing defaults.');
         return fallback;
       }
